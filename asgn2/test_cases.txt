@@ -1,2 +1,69 @@
 These can be the test cases sequence :
 
+
+Testing :
+
+	* Single client testing :
+
+		* ls 
+			* ls -l
+			* ls -a
+			* ls -i
+			* ls -li
+			* ls -o
+			* ls -la
+			* ls -l tee1.txt
+			* ls -l tmp/test/   
+			* ls -a
+			* ls -lh
+			* ls -F
+			* ls --help
+		* cd
+			* cd /
+			* cd
+			* cd ..
+			* cd /mnt/d/F
+			* cd ~
+			* cd -
+			* cd --  // show last working directory from where we moved
+			* cd ../ ../
+		* chmod.
+
+			*chmod u=rwx,g=rx,o=r myfile
+			*View permission of a test file using ls -l filename -la   ls -la
+			* Set the different permissions chmod a= tee1.txt or chmod a=r tee1.txt
+			* Test the different permissions ls -la and or open the file and test it
+			* Reset them
+			* chmod u+r,g=rx,o=r myfile
+			* Remove the execute permission for all users: chmod a-x filename 
+		* lls (local ls on the client)
+		* lcd (local cd on the client)
+		* lchmod (local chmod on the client)
+		* close
+
+
+
+
+
+	* put
+	* get
+
+
+
+
+
+
+
+
+
+
+	* Multiclient testing :
+
+		* Same as above commands and test if commands are executing properly. 
+		* Do some stress testing
+		* add more...
+		* Open three clients and change the server location in three of them and do ls there
+		* Change the client locations back and forth and see the ls changes
+		*
+
+
