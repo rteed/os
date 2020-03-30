@@ -46,13 +46,29 @@ Testing :
 
 
 	* put
+		*put server.cpp
+		*lcd ../
+		 put asgn2/server.cpp                     #relative indexing
+		*put /os/asgn2/server.cpp	          #absolute indexing
+		*put ser.cpp                              #wrong name-give error
+		*put server.cpp test_cases.txt            #other than one argument -give error
 	* get
+		*cd ../tmp
+		 get foo3.xt
+		*get ../tmp/foo3.txt                      #relative indexing
+		*get /os/tmp/foo3.txt	          	  #absolute indexing
+		*get ser.cpp                              #wrong name-give error
+		*get server.cpp test_cases.txt            #other than one argument -give error
 
 
+	* multiclient
+		-client 1
+			*put foo4.txt                     #put 200MB file in tmp folder
+		-client 2
+			*get foo4.txt                     #while client1 is writing the file ,client 2 tries to fetch it 
+							  #found no documentation of how it is handled by ftp		
 
-
-
-
+    
 
 
 
