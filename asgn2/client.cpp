@@ -129,7 +129,7 @@ void sendFileContent(char* dirName,char* fileName,int output_socket)
     long SizeCheck = 0;
     while (!feof(file_)) // to read file
     {
-        // fucntion used to read the contents of file
+        // function used to read the contents of file
         fread(buffer, sizeof(char),sizeof(buffer), file_);
         long fr_block_sz=write(output_socket,buffer,sizeof(buffer));
        // cout << buffer<<endl;
@@ -205,7 +205,10 @@ while((fr_block_sz = recv(output_socket, revbuf, LENGTH, 0)) > 0)
             }
         }
     fclose(fr);
-    std::cout<<"File transfer done"<<std::endl;
+		if(SizeCheck<FileSize)
+	    cout<<"File transfer incomplete"<<endl;
+    else
+    	    std::cout<<"File transfer done"<<std::endl;
     return;
 
 }
@@ -232,31 +235,48 @@ int main(int argc, char const *argv[])
 
 	// Convert IPv4 and IPv6 addresses from text to binary form
 	//192.168.56.1
-	if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
+
+	// int inet_pton(int af, const char *src, void *dst);  // convert IPv4 and IPv6 addresses from text to binary form
+	// This function converts the character string src into a network
+  //  address structure in the address family, then copies the network
+       // address structure to dst.
+			 //  dst is written in network byte order.
+	if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
 	{
 		printf("\nInvalid address/ Address not supported \n");
 		// return -1;
 	}
+//   int connect(int sockfd, const struct sockaddr *addr,socklen_t addrlen);
+// The connect() system call connects the socket referred to by the file
+       // descriptor sockfd to the address specified by addr.  The addrlen
+       // argument specifies the size of addr.
+
 
 	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
 		printf("\nConnection Failed \n");
 		return -1;
 	}
-  memset(input_string, 0, strlen(input_string));
+  memset(input_string, 0, strlen(input_string));  // initializing input_string to null
   char *output = new char[BUFF_SIZE1];
-  char *pwd = new char[BUFF_SIZE2];
+  char *pwd = new char[BUFF_SIZE2];  // present working directory of server
   int arg_count;
-  char cwd[BUFF_SIZE2];
-  char **parsed_args = new char*[BUFF_SIZE2];
+  char cwd[BUFF_SIZE2];  // holds the current working directory info
+  char **parsed_args = new char*[BUFF_SIZE2];  // null terminated array of strings of the space limited parsed arguments
   do {
 		memset(input_string, 0, strlen(input_string));
 		memset(output, 0, strlen(output));
 		memset(pwd, 0, strlen(pwd));
-
+		memset(cwd, 0, strlen(cwd));
+		arg_count = 0;
 
     send(sock , "pwd" , 3 , 0 );
     valread = read( sock , pwd, BUFF_SIZE2);
+		if(strcmp(pwd,"")==0)
+    {
+			printf("\n@@@@@@@@@Connection error\n");
+    	break;
+    }
     printf("--- server location --- %s >>\n", pwd );
 
     getcwd(cwd, sizeof(cwd));
@@ -270,30 +290,33 @@ int main(int argc, char const *argv[])
 		}
     parse_input_string(input_string,  parsed_args, arg_count,' '); //space as delim
 		if (strcmp(parsed_args[0], "lls") == 0  ) {
-	      if (strcmp(parsed_args[0], "lls") == 0) {
-					input_string = input_string + 1;
-					printf("\n\n");
-					pid_t pc = fork();
-	      	if(pc==0){
-						cout << endl;
-		        if (execvp("ls",parsed_args) < 0) {
-							cout << endl << "Could not execute command" << endl << endl;
-		    		}
-						exit(0);  // exit in case the command does not execute
-	      	}
-	      	else{
-	       		wait(NULL);
-	      	}
-					printf("\n\n");
-	      }
-	      continue;
-		 }
+
+				//input_string = input_string + 1;
+				parsed_args[0] = parsed_args[0] + 1;
+
+				printf("\n\n");
+				pid_t pc = fork();
+      	if(pc==0){ // new process
+					cout << endl;
+	        if (execvp("ls",parsed_args) < 0) {
+						cout << endl << "Could not execute command" << endl << endl;
+	    		}
+					exit(0);  // exit in case the command does not execute
+      	}
+      	else{
+       		wait(NULL);
+      	}
+				printf("\n\n");
+				continue;
+      }
+
+
 
 		  if (strcmp(parsed_args[0], "lcd") == 0) {
 
 
 		    if (arg_count == 1 || strcmp(parsed_args[1], "~") == 0) {
-					getcwd(prev_loc, sizeof(prev_loc));
+					getcwd(prev_loc, sizeof(prev_loc)); // store current location in prev_loc
 		      chdir(getenv("HOME"));
 					printf("\n\n%s\n\n", "Changed to hme" );
 
@@ -311,9 +334,16 @@ int main(int argc, char const *argv[])
 					printf("\n\n%s\n\n", "Changed to previous" );
 
 				}
+				else if (strcmp(parsed_args[1], "--") == 0) {
+					// getcwd(temp, sizeof(prev_loc));
+					// chdir(prev_loc);
+					// strcpy(prev_loc, temp);
+					printf("\n\n%s\n\n",  prev_loc);
+
+				}
 
 		    else{
-					// lcd is removed
+					// lcd is removed - cd to a directory path
 					input_string = input_string + 4;
 					getcwd(temp, sizeof(prev_loc));
 					int status = chdir(input_string);
@@ -330,7 +360,7 @@ int main(int argc, char const *argv[])
 		  }
 
 		if (strcmp(parsed_args[0], "lchmod") == 0  ) {
-			input_string = input_string + 1;
+			parsed_args[0] = parsed_args[0] + 1;
 			printf("\n\n");
 			pid_t pc = fork();
 			if(pc==0){
@@ -371,9 +401,10 @@ int main(int argc, char const *argv[])
             continue;
         }
 
-
+		// if the command is any of the other client commands, it must be a server command
+		// and sent to the server
     send(sock , input_string , strlen(input_string) , 0 );
-    if (strcmp(input_string, "exit") == 0) {
+    if (strcmp(input_string, "close") == 0) {
         // send(newConnSock, buffer, sizeof(buffer), 0);
         printf("breaking\n\n");
         break;

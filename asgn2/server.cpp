@@ -180,7 +180,10 @@ while((fr_block_sz = recv(output_socket, revbuf, LENGTH, 0)) > 0)
             }
         }
     fclose(fr);
-    std::cout<<"File transfer done"<<std::endl;
+    if(SizeCheck<FileSize)
+      cout<<"File transfer incomplete"<<endl;
+    else
+      std::cout<<"File transfer done"<<std::endl;
     return;
 
 }
@@ -232,9 +235,7 @@ void parse_input_string(char *input_string, char **parsed_strings, int &count, c
 
 
 void execute_cmd(char *cmd, char *buff,int new_socket){
-  // fclose (stderr);
-	// stderr = fopen ("tee2.txt", "w");
-    //printf("\ncmd: %s",cmd);
+
     std::cout<<"cmd: "<<cmd<<std::endl;
   char **parsed_args = new char*[BUFF_SIZE2];
   int arg_count;
@@ -262,9 +263,12 @@ void execute_cmd(char *cmd, char *buff,int new_socket){
 			strcpy(prev_loc, temp);
 			strcpy(buff, "Changed to previous");
 		}
+    else if (strcmp(parsed_args[1], "--") == 0) {
+			strcpy(buff, prev_loc); // showing what the previous location was
+		}
 
     else{
-			cmd = cmd + 3; //shifting cd command by 3 characters
+			cmd = cmd + 3; //shifting cd command by 3 characters to get the path directory
 			getcwd(temp, sizeof(prev_loc));
 			int status = chdir(cmd);
       if (status) {
@@ -301,8 +305,8 @@ void execute_cmd(char *cmd, char *buff,int new_socket){
      receiveFileContent(buff,parsed_args[1],new_socket);
      return;
    }
-	concat_two_strings(cmd, " 2>&1");
-	FILE *fcmd = popen(cmd, "r");
+	concat_two_strings(cmd, " 2>&1"); // redirect stderr(2) to stdout (1)
+	FILE *fcmd = popen(cmd, "r"); // executes the command and stores the contents of both stdout and stderr in the file pointer
 	// static char buff[1024];
 	size_t n;
 	if (fcmd == NULL) {
@@ -321,12 +325,6 @@ void execute_cmd(char *cmd, char *buff,int new_socket){
 
 	// printf("\n\n buff content is\n %s\n\n", buff);
 
-
-
-
-
-
-
 }
 
 int main(int argc, char const *argv[]){
@@ -339,30 +337,69 @@ int main(int argc, char const *argv[]){
 
 
     // Creating socket file descriptor
+    // Returns an end point of communication and returns a file descriptor
+    //socket(int domain, int type, int protocol);
+    // domain : indicates the protocol family used for comm  AF_INET      IPv4 Internet protocols
+    // type SOCK_STREAM     Provides sequenced, reliable, two-way, connection-
+                       // based byte streams.  An out-of-band data transmission
+                       // mechanism may be supported - TCP
+    // type indicates signs and symbols used for communication.
+    // Valid socket types are SOCK_STREAM to open a tcp(7) socket,
+       // SOCK_DGRAM to open a udp(7) socket, or SOCK_RAW to open a raw(7)
+       // socket to access the IP protocol directly.
+       // 0 indicates to select the default protocol in the family
+
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    // Forcefully attaching socket to the port 8080
+
+    // setting the options of the socket
+    // int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+    // set socket options
+    // socket : what file descriptor
+    // level : The level argument specifies the protocol level at which the option
+               // resides. To set options at the socket level, specify the level
+               // argument as SOL_SOCKET.
+    // option_name  :  SO_REUSEADDR - reuse of local addresses
+                    // SO_REUSEPORT - Permits multiple AF_INET or AF_INET6 sockets to be bound to an
+                    // identical socket address.
+
+    // *option_value : the value in here will be used to set the socket name option
+    // option_len  : len of the option
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
                                                   &opt, sizeof(opt)))
     {
         perror("setsockopt");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); // system wide os constant non zero
     }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons( PORT );
+    address.sin_family = AF_INET;  // IPv4 Internet protocols
+    address.sin_addr.s_addr = INADDR_ANY;   // INADDR_ANY  (0.0.0.0) means any address for binding
+                                            // assigns all/any of the local network addresses at that port
+    address.sin_port = htons( PORT );  // /* port in network byte order */
+              // The htons() function converts the unsigned short integer hostshort
+       //from host byte order to network byte order (big endian).
 
-    // Forcefully attaching socket to the port 8080
+      //  When a socket is created with socket(2), it exists in a name space
+          // (address family) but has no address assigned to it.  bind() assigns
+          // the address specified by addr to the socket referred to by the file
+          // descriptor sockfd.
+    // attaching socket to the port 8080
+    //  bind() assigns the address specified by addr to the socket referred to by the file
+    //   descriptor sockfd.
     if (bind(server_fd, (struct sockaddr *)&address,
                                  sizeof(address))<0)
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
+    // int listen(int sockfd, int backlog);
+    //  listen() marks the socket referred to by sockfd as a passive socket,
+       // that is, as a socket that will be used to accept incoming connection
+       // requests using accept(2). The backlog argument defines the maximum length to which the queue of
+       //   pending connections for sockfd may grow.
     if (listen(server_fd, 3) < 0)
     {
         perror("listen");
@@ -374,6 +411,13 @@ int main(int argc, char const *argv[]){
     {
 
 
+// int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+// The accept() system call is used with connection-based socket types
+       // (SOCK_STREAM, SOCK_SEQPACKET).  It extracts the first connection
+       // request on the queue of pending connections for the listening socket,
+       // sockfd, creates a new connected socket, and returns a new file
+       // descriptor referring to that socket.  The newly created socket is not
+       // in the listening state.
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address,
                        (socklen_t*)&addrlen))<0)
     {
@@ -393,11 +437,13 @@ int main(int argc, char const *argv[]){
       valread = read( new_socket , buffer , BUFF_SIZE1);
         //printf("buffer: %s",buffer);
         std::cout<<"buffer: "<<buffer<<std::endl;
-      if (strcmp(buffer, "exit") == 0) {
-          printf("breaking\n\n");
+
+      if (strcmp(buffer, "close") == 0) {
+          // send(newConnSock, buffer, sizeof(buffer), 0);
+          std::cout << "\nclosing" << '\n';
           exit(0);
-          //break;
       }
+      // executing the command and storing the result in the output string variable
       execute_cmd(buffer, output,new_socket);
 
 
@@ -405,11 +451,11 @@ int main(int argc, char const *argv[]){
         strcpy(output, "\n\nno output\n\n");
       }
       if(strstr(buffer,"get")==nullptr&&strstr(buffer,"put")==nullptr)
-              {
-                  //std::cout<<"Not get or put"<<std::endl;
-                  send(new_socket , output , strlen(output) , 0 );
+      {
+          //std::cout<<"Not get or put"<<std::endl;
+          send(new_socket , output , strlen(output) , 0 );
 
-                }
+      }
 
       // break;
 
@@ -417,7 +463,7 @@ int main(int argc, char const *argv[]){
     }
     else{
     //parent process
-    std::cout<<"In parent process"<<std::endl;
+      std::cout<<"In parent process"<<std::endl;
     }
     }
     return 0;
