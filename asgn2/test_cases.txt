@@ -28,9 +28,10 @@ Testing :
 			* cd --  // show last working directory from where we moved
 			* cd ../ ../
 		* chmod.
-
-			*chmod u=rwx,g=rx,o=r myfile
-			*View permission of a test file using ls -l filename -la   ls -la
+			* test the change of permissions using another terminal and 
+			* more tee1.txt
+			* chmod u=rwx,g=rx,o=r myfile
+			* View permission of a test file using ls -l filename -la   ls -la
 			* Set the different permissions chmod a= tee1.txt or chmod a=r tee1.txt
 			* Test the different permissions ls -la and or open the file and test it
 			* Reset them
@@ -74,7 +75,7 @@ Testing :
 
 
 	* Multiclient testing :
-
+l
 		* Same as above commands and test if commands are executing properly. 
 		* Do some stress testing
 		* add more...
