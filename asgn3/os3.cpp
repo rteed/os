@@ -58,6 +58,7 @@ void display_stats(std::deque<Process> v){
 }
 
 void display_stats(std::vector<Process> v){
+  std::cout << "PID\tArrival\tBurst\tPriority" << '\n';
   for (int i = 0; i < v.size(); i++) {
     std::cout << v[i].pid << '\t' << v[i].arrival  << '\t' << v[i].burst <<  '\t' << v[i].priority << '\n';
   }
